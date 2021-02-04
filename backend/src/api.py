@@ -16,7 +16,7 @@ CORS(app)
 !! NOTE THIS WILL DROP ALL RECORDS AND START YOUR DB FROM SCRATCH
 !! NOTE THIS MUST BE UNCOMMENTED ON FIRST RUN
 '''
-# db_drop_and_create_all()
+db_drop_and_create_all()
 
 ## ROUTES
 '''
@@ -27,7 +27,13 @@ CORS(app)
     returns status code 200 and json {"success": True, "drinks": drinks} where drinks is the list of drinks
         or appropriate status code indicating reason for failure
 '''
-
+@app.route('/drinks', methods=['GET'])
+def get_all_drinks():
+    all_drinks = Drink.query.order_by(Drink.id).all()
+    return jsonify({
+        'success': True,
+        'drinks': [drink.short() for drink in all_drinks]
+    }), 200
 
 '''
 @TODO implement endpoint
@@ -37,7 +43,14 @@ CORS(app)
     returns status code 200 and json {"success": True, "drinks": drinks} where drinks is the list of drinks
         or appropriate status code indicating reason for failure
 '''
-
+@app.route('/drinks-detail', methods=['GET'])
+@requires_auth('get:drinks-detail')
+def get_drinks_detail(token):
+    all_drinks = Drink.query.all()
+    return jsonify({
+        'success': True,
+        'drinks': [drink.long() for drink in all_drinks]
+    }), 200
 
 '''
 @TODO implement endpoint
@@ -49,6 +62,18 @@ CORS(app)
         or appropriate status code indicating reason for failure
 '''
 
+@app.route('/drinks', methods=['POST'])
+@requires_auth('post:drinks')
+def add_drink(token):
+    req = request.get_json()
+    recipe = req['recipe']
+    if isinstance(recipe, dict):
+        recipe = [recipe]
+
+    drink = Drink(title = req['title'], recipe = json.dumps(recipe))
+    drink.insert()
+
+    return jsonify({'success': True, 'drinks': [drink.long()]})
 
 '''
 @TODO implement endpoint
@@ -62,6 +87,26 @@ CORS(app)
         or appropriate status code indicating reason for failure
 '''
 
+@app.route('/drinks/<int:id>', methods=['PATCH'])
+@requires_auth('patch:drinks')
+def edit_drink(token, id):
+    data = request.get_json()
+    title = data.get('title')
+    recipe = data.get('recipe')
+
+    drink = Drink.query.filter_by(id=id).first()
+    if drink:
+        drink.title = title
+        drink.recipe = json.dumps(recipe)
+        drink.update()
+        drink_updated = Drink.query.filter_by(id=id).first()
+        return jsonify({
+        'success': True,
+        'drinks': [drink_updated.long()]
+        })
+
+    else:
+        abort(404)
 
 '''
 @TODO implement endpoint
@@ -74,6 +119,19 @@ CORS(app)
         or appropriate status code indicating reason for failure
 '''
 
+@app.route('/drinks/<int:id>', methods=['DELETE'])
+@requires_auth('delete:drinks')
+def delete_drink(token, id):
+    drink = Drink.query.filter_by(id=id)
+    if drink:
+        drink.delete()
+        return jsonify({
+        'success': True,
+        'deleted': id
+        })
+    else:
+        abort(404)
+    
 
 ## Error Handling
 '''
