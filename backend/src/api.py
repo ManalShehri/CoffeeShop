@@ -90,21 +90,20 @@ def add_drink(token):
 @app.route('/drinks/<int:id>', methods=['PATCH'])
 @requires_auth('patch:drinks')
 def edit_drink(token, id):
-    data = request.get_json()
-    title = data.get('title')
-    recipe = data.get('recipe')
-
-    drink = Drink.query.filter_by(id=id).first()
+    data = request.get_json() 
+    drink = Drink.query.filter(Drink.id == id).one_or_none()
     if drink:
-        drink.title = title
-        drink.recipe = json.dumps(recipe)
-        drink.update()
-        drink_updated = Drink.query.filter_by(id=id).first()
+        if 'title' in data:
+            title = data.get('title')
+            drink.title = title
+        if 'recipe' in data:
+            recipe = data.get('recipe')
+            drink.recipe = json.dumps(recipe)
+        drink.update() 
         return jsonify({
         'success': True,
-        'drinks': [drink_updated.long()]
+        'drinks': [drink.long()]
         })
-
     else:
         abort(404)
 
@@ -155,7 +154,13 @@ def unprocessable(error):
                     }), 404
 
 '''
-
+@app.errorhandler(404)
+def not_found(error):
+    return jsonify({
+                    "success": False, 
+                    "error": 404,
+                    "message": "resource not found"
+                    }), 404
 '''
 @TODO implement error handler for 404
     error handler should conform to general task above 
@@ -166,3 +171,12 @@ def unprocessable(error):
 @TODO implement error handler for AuthError
     error handler should conform to general task above 
 '''
+@app.errorhandler(401)
+def unauthorized(error):
+    return jsonify({
+                    "success": False, 
+                    "error": 401,
+                    "message": "resource not found"
+                    }), 401
+                    @app.errorhandler(401)
+
